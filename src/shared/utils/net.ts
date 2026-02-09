@@ -21,14 +21,21 @@ export function defaultLocalIp(): string {
   return '';
 }
 
-export function resolveMdnsHost(host?: string, preferredIp?: string): string | undefined {
-  const preferred = preferredIp?.trim();
-  if (preferred && preferred !== '0.0.0.0') {
-    return preferred;
+export function systemNameToHostname(systemName: string) {
+  let hostname = systemName.toLowerCase();
+  hostname = hostname.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  hostname = hostname.replace(/[^a-z0-9.-]/g, '-');
+  hostname = hostname.replace(/-+/g, '-');
+  hostname = hostname.replace(/\.+/g, '.');
+  hostname = hostname.replace(/^[-.]+|[-.]+$/g, '');
+  hostname = hostname
+    .split('.')
+    .map(label => label.slice(0, 63))
+    .join('.');
+
+  if (hostname.length > 253) {
+    hostname = hostname.slice(0, 253);
   }
-  const candidate = host && host !== '0.0.0.0' ? host : defaultLocalIp();
-  if (!candidate || candidate === '0.0.0.0') {
-    return undefined;
-  }
-  return candidate;
+
+  return hostname;
 }

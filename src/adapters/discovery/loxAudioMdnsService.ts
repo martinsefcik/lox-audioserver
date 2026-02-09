@@ -1,7 +1,7 @@
 import type { HttpServerConfig } from '@/config/http';
 import type { ConfigPort } from '@/ports/ConfigPort';
 import type { MdnsPort } from '@/ports/MdnsPort';
-import { resolveMdnsHost } from '@/shared/utils/net';
+import { systemNameToHostname } from '@/shared/utils/net';
 import { LoxAudioMdnsAdvertiser } from '@/adapters/discovery/loxAudioMdnsAdvertiser';
 import type { MdnsLifecycleService } from '@/adapters/discovery/mdnsLifecycle';
 
@@ -23,12 +23,13 @@ export class LoxAudioMdnsService implements MdnsLifecycleService {
     }
     const systemConfig = this.configPort.getSystemConfig();
     const systemName = systemConfig?.audioserver?.name || 'Lox Audio Server';
-    const systemIp = systemConfig?.audioserver?.ip?.trim();
+    const systemIp = systemConfig?.audioserver?.ip?.trim() || undefined;
     const mac = systemConfig?.audioserver?.macId?.trim();
     this.advertiser.advertise({
       name: systemName,
-      host: resolveMdnsHost(this.config.host, systemIp),
+      host: systemNameToHostname(systemName),
       port: this.config.port,
+      restrictedAddress: systemIp,
       txt: {
         api: '/api',
         linein: '/api/linein',

@@ -1,6 +1,6 @@
 import type { HttpServerConfig } from '@/config/http';
 import type { ConfigPort } from '@/ports/ConfigPort';
-import { resolveMdnsHost } from '@/shared/utils/net';
+import { systemNameToHostname } from '@/shared/utils/net';
 import type { SendspinClientConnector } from '@/adapters/outputs/sendspin/sendspinClientConnector';
 import type { MdnsLifecycleService } from '@/adapters/discovery/mdnsLifecycle';
 
@@ -18,12 +18,13 @@ export class SendspinServerAdvertiser implements MdnsLifecycleService {
       return;
     }
     const systemName = this.configPort.getSystemConfig()?.audioserver?.name || 'Lox Audio Server';
-    const systemIp = this.configPort.getSystemConfig()?.audioserver?.ip?.trim();
+    const systemIp = this.configPort.getSystemConfig()?.audioserver?.ip?.trim() || undefined;
     this.connector.advertiseServer({
+      name: systemName + ' - Sendspin',
+      host: systemNameToHostname(systemName) + '-sendspin',
       port: this.config.port,
-      host: resolveMdnsHost(this.config.host, systemIp),
+      restrictedAddress: systemIp,
       path: '/sendspin',
-      name: systemName,
     });
     this.started = true;
   }

@@ -9,12 +9,13 @@ export type MdnsServiceRecord = {
 };
 
 export type MdnsPublishOptions = {
-  name?: string;
+  name: string;
   type: string;
   protocol?: 'tcp' | 'udp';
   port: number;
   host?: string;
   txt?: Record<string, string>;
+  restrictedAddress?: string;
 };
 
 export type MdnsBrowseOptions = {
@@ -31,7 +32,7 @@ export type MdnsBrowser = {
 };
 
 export interface MdnsPort {
-  publish: (options: MdnsPublishOptions) => MdnsRegistration;
+  publish: (options: MdnsPublishOptions, onPublished: (registration: MdnsRegistration) => void) => void;
   browse: (options: MdnsBrowseOptions, onService: (service: MdnsServiceRecord) => void) => MdnsBrowser;
   shutdown: () => void;
 }

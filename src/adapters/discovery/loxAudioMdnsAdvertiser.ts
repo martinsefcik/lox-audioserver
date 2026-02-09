@@ -4,6 +4,7 @@ import type { MdnsPort, MdnsRegistration } from '@/ports/MdnsPort';
 type AdvertiseOptions = {
   name: string;
   host?: string;
+  restrictedAddress?: string;
   port: number;
   txt?: Record<string, string | undefined>;
 };
@@ -17,19 +18,22 @@ export class LoxAudioMdnsAdvertiser {
   public advertise(options: AdvertiseOptions): void {
     this.stop();
     const txt = this.cleanTxt(options.txt);
-    this.registration = this.mdns.publish({
+    this.mdns.publish({
       name: options.name,
       type: 'loxaudio',
       protocol: 'tcp',
-      port: options.port,
-      host: options.host,
-      txt,
-    });
-    this.log.info('Lox Audio server advertised via mDNS', {
-      name: options.name,
       host: options.host,
       port: options.port,
+      restrictedAddress: options.restrictedAddress,
       txt,
+    }, registration => {
+      this.registration = registration;
+      this.log.info('Lox Audio server advertised via mDNS', {
+        name: options.name,
+        host: options.host,
+        port: options.port,
+        txt,
+      });
     });
   }
 

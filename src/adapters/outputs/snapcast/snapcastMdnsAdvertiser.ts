@@ -1,5 +1,3 @@
-import net from 'node:net';
-import os from 'node:os';
 import { createLogger } from '@/shared/logging/logger';
 import type { MdnsPort, MdnsRegistration } from '@/ports/MdnsPort';
 
@@ -8,6 +6,7 @@ type SnapcastAdvertiseOptions = {
   host?: string;
   streamPort: number;
   httpPort: number;
+  restrictedAddress?: string;
 };
 
 export class SnapcastMdnsAdvertiser {
@@ -19,26 +18,38 @@ export class SnapcastMdnsAdvertiser {
 
   public advertise(options: SnapcastAdvertiseOptions): void {
     this.stop();
-    const host = this.normalizeHost(options.host);
-    this.streamRegistration = this.mdns.publish({
-      name: options.name,
+    const host = options.host;
+    const name = options.name + ' - Snapcast Server';
+    this.mdns.publish({
+      name,
       type: 'snapcast',
       protocol: 'tcp',
-      port: options.streamPort,
       host,
+      port: options.streamPort,
+      restrictedAddress: options.restrictedAddress,
+    }, registration => {
+      this.streamRegistration = registration;
+      this.log.info('Snapcast Server service advertised via mDNS', {
+        name,
+        host,
+        streamPort: options.streamPort,
+      });
     });
-    this.httpRegistration = this.mdns.publish({
-      name: options.name,
+    const httpName = options.name + ' - Snapcast HTTP API';
+    this.mdns.publish({
+      name: httpName,
       type: 'snapcast-http',
       protocol: 'tcp',
+      host: host + '-http',
       port: options.httpPort,
-      host,
-    });
-    this.log.info('Snapcast services advertised via mDNS', {
-      name: options.name,
-      host,
-      streamPort: options.streamPort,
-      httpPort: options.httpPort,
+      restrictedAddress: options.restrictedAddress,
+    }, registration => {
+      this.httpRegistration = registration;
+      this.log.info('Snapcast HTTP API service advertised via mDNS', {
+        name: httpName,
+        host,
+        httpPort: options.httpPort,
+      });
     });
   }
 
@@ -47,27 +58,5 @@ export class SnapcastMdnsAdvertiser {
     this.httpRegistration?.stop();
     this.streamRegistration = null;
     this.httpRegistration = null;
-  }
-
-  private normalizeHost(host?: string): string | undefined {
-    const trimmed = host?.trim() ?? '';
-    if (trimmed) {
-      if (net.isIP(trimmed)) {
-        const hostname = os.hostname();
-        if (!hostname) {
-          return undefined;
-        }
-        const normalized = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
-        return normalized.includes('.') ? normalized : `${normalized}.local`;
-      }
-      const normalized = trimmed.endsWith('.') ? trimmed.slice(0, -1) : trimmed;
-      return normalized.includes('.') ? normalized : `${normalized}.local`;
-    }
-    const hostname = os.hostname();
-    if (!hostname) {
-      return undefined;
-    }
-    const normalized = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
-    return normalized.includes('.') ? normalized : `${normalized}.local`;
   }
 }

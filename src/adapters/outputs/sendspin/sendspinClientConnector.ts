@@ -13,6 +13,14 @@ interface Endpoint {
   clientId?: string;
 }
 
+type SendspinAdvertiseOptions = {
+  name: string;
+  host?: string;
+  port: number;
+  restrictedAddress?: string;
+  path?: string;
+};
+
 /**
  * Discovers Sendspin clients via mDNS and establishes outbound WebSocket connections
  * so playback can be pushed without manually starting the client with a URL.
@@ -79,21 +87,24 @@ export class SendspinClientConnector {
     this.directEndpoints.delete(clientId);
   }
 
-  public advertiseServer(options: { port: number; host?: string; name?: string; path?: string }): void {
+  public advertiseServer(options: SendspinAdvertiseOptions): void {
     this.stopAdvertising();
-    this.serverRegistration = this.mdns.publish({
-      name: options.name || 'Lox Audio Server',
+    this.mdns.publish({
+      name: options.name,
       type: 'sendspin-server',
       protocol: 'tcp',
-      port: options.port,
       host: options.host,
+      port: options.port,
+      restrictedAddress: options.restrictedAddress,
       txt: { path: this.normalizePathValue(options.path) },
-    });
-    this.log.info('Sendspin server advertised via mDNS', {
-      name: options.name || 'Lox Audio Server',
-      host: options.host,
-      port: options.port,
-      path: this.normalizePathValue(options.path),
+    }, registration => {
+      this.serverRegistration = registration;
+      this.log.info('Sendspin Server service advertised via mDNS', {
+        name: options.name,
+        host: options.host,
+        port: options.port,
+        path: this.normalizePathValue(options.path),
+      });
     });
   }
 

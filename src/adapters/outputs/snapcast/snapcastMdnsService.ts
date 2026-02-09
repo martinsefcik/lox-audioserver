@@ -2,7 +2,7 @@ import { createLogger } from '@/shared/logging/logger';
 import type { HttpServerConfig } from '@/config/http';
 import type { ConfigPort } from '@/ports/ConfigPort';
 import type { MdnsPort } from '@/ports/MdnsPort';
-import { resolveMdnsHost } from '@/shared/utils/net';
+import { systemNameToHostname } from '@/shared/utils/net';
 import { SnapcastMdnsAdvertiser } from '@/adapters/outputs/snapcast/snapcastMdnsAdvertiser';
 import type { MdnsLifecycleService } from '@/adapters/discovery/mdnsLifecycle';
 
@@ -29,17 +29,18 @@ export class SnapcastMdnsService implements MdnsLifecycleService {
       return;
     }
     const systemName = this.configPort.getSystemConfig()?.audioserver?.name || 'Lox Audio Server';
-    const systemIp = this.configPort.getSystemConfig()?.audioserver?.ip?.trim();
+    const systemIp = this.configPort.getSystemConfig()?.audioserver?.ip?.trim() || undefined;
     const streamPort = this.portProvider.getSnapcastAdvertisePort();
     if (!streamPort) {
-      this.log.warn('snapcast mdns skipped (tcp server not listening)');
+      this.log.warn('Snapcast mdns skipped (tcp server not listening)');
       return;
     }
     this.advertiser.advertise({
       name: systemName,
-      host: resolveMdnsHost(this.config.host, systemIp),
+      host: systemNameToHostname(systemName) + '-snapcast',
       streamPort,
       httpPort: this.config.port,
+      restrictedAddress: systemIp,
     });
     this.started = true;
   }
